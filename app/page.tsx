@@ -87,9 +87,10 @@ export default function PulseSyncDashboard() {
               </div>
             </button>
             <div className="h-6 w-[1px] bg-slate-300" />
-            <button className="bg-[#1e293b] text-white px-6 py-2 rounded-full font-medium hover:bg-slate-700 transition-all">
-              Book Appointment
-            </button>
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest leading-none mb-1">Status</span>
+              <span className="text-xs font-bold text-slate-900">Interactive Cardiology Platform</span>
+            </div>
           </div>
         </nav>
 
