@@ -1,0 +1,32 @@
+// prisma/schema.prisma
+// Prisma v7: datasource TIDAK memiliki url property di sini
+// URL dikelola di prisma.config.ts
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model UserProgress {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  completed Boolean  @default(false)
+  module    String
+  score     Int?
+  updatedAt DateTime @updatedAt
+
+  @@map("user_progress")
+}
+
+model ClinicalCase {
+  id          String @id @default(cuid())
+  title       String
+  description String
+  audioUrl    String
+  correctAnsw String
+
+  @@map("clinical_cases")
+}
