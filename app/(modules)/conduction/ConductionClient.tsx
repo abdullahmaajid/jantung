@@ -63,6 +63,13 @@ export default function ConductionClient({ conductionNodes }: { conductionNodes:
     return () => clearTimeout(timeout);
   }, [isPlaying, conductionStep, setConductionStep, setPhase, conductionNodes.length]);
 
+  const handleStepClick = useCallback((index: number) => {
+    setConductionStep(index);
+    if (isPlaying) {
+      togglePlayback();
+    }
+  }, [setConductionStep, isPlaying, togglePlayback]);
+
   const [activeTab, setActiveTab] = useState<"3d" | "video">("3d");
 
   return (
