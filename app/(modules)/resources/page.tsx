@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import type { Metadata } from "next";
+import { FileText, BookOpen, Map, Link as LinkIcon, ExternalLink } from "lucide-react";
 
 type Resource = {
   id: string;
@@ -98,18 +98,18 @@ const RESOURCES: Resource[] = [
   },
 ];
 
-const TYPE_ICONS: Record<Resource["type"], string> = {
-  journal: "📄",
-  book: "📚",
-  atlas: "🗺️",
-  video: "🔗",
+const TYPE_ICONS: Record<Resource["type"], React.ReactNode> = {
+  journal: <FileText size={18} strokeWidth={2} />,
+  book: <BookOpen size={18} strokeWidth={2} />,
+  atlas: <Map size={18} strokeWidth={2} />,
+  video: <LinkIcon size={18} strokeWidth={2} />,
 };
 
 const TYPE_COLORS: Record<Resource["type"], string> = {
-  journal: "#3182ce",
-  book: "#805ad5",
-  atlas: "#38a169",
-  video: "#dd6b20",
+  journal: "var(--color-accent-secondary)",
+  book: "var(--color-accent-secondary)",
+  atlas: "var(--color-accent-primary-light)",
+  video: "var(--text-secondary)",
 };
 
 function groupByCategory(resources: Resource[]): Record<string, Resource[]> {
@@ -124,25 +124,25 @@ export default function ResourcesPage() {
   const grouped = groupByCategory(RESOURCES);
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#f8fafc] overflow-hidden">
+    <div className="flex flex-col h-screen w-full bg-[var(--bg-main)] text-[var(--text-primary)] overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-slate-100 flex-shrink-0 sticky top-0 z-10">
+      <header className="flex items-center justify-between px-8 py-4 bg-[var(--bg-main)] border-b border-[var(--border-light)] flex-shrink-0 sticky top-0 z-10">
         <div>
-          <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Modul 05</p>
-          <h1 className="text-xl font-bold text-slate-900 mt-0.5">Sumber Daya & Referensi</h1>
+          <p className="text-[10px] font-bold text-[var(--color-accent-secondary)] uppercase tracking-widest">Modul 05</p>
+          <h1 className="text-xl font-bold text-[var(--text-primary)] mt-0.5">Sumber Daya & Referensi</h1>
         </div>
-        <span className="px-3 py-1.5 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase rounded-full border border-slate-200">
+        <span className="px-3 py-1.5 bg-[var(--bg-card)] text-[var(--text-secondary)] text-[10px] font-bold uppercase rounded-full border border-[var(--border-light)]">
           {RESOURCES.length} Referensi
         </span>
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-8 py-8">
+      <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-3xl mx-auto">
           {/* Intro */}
-          <div className="p-5 bg-white border border-slate-100 rounded-2xl mb-8 shadow-sm">
-            <h2 className="text-base font-bold text-slate-800 mb-2">Referensi Primer</h2>
-            <p className="text-sm text-slate-500 leading-relaxed">
+          <div className="p-5 glass-ui-dark mb-8">
+            <h2 className="text-base font-bold text-[var(--text-primary)] mb-2">Referensi Primer</h2>
+            <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
               Aplikasi ini adalah titik awal. Untuk pemahaman yang lebih mendalam, eksplorasi referensi berikut — jurnal peer-reviewed, atlas anatomi standar, dan sumber daya multimedia terpilih.
             </p>
           </div>
@@ -151,9 +151,9 @@ export default function ResourcesPage() {
           {Object.entries(grouped).map(([category, items]) => (
             <div key={category} className="mb-8">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-6 h-0.5 bg-blue-500 rounded" />
-                <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">{category}</h2>
-                <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full">{items.length}</span>
+                <div className="w-6 h-0.5 bg-[var(--color-accent-secondary)] rounded" />
+                <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">{category}</h2>
+                <span className="px-2 py-0.5 bg-[var(--bg-card)] text-[var(--text-secondary)] text-[10px] font-bold rounded-full border border-[var(--border-light)]">{items.length}</span>
               </div>
 
               <div className="space-y-3">
@@ -166,44 +166,46 @@ export default function ResourcesPage() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className="flex items-start gap-4 p-4 bg-white border border-slate-100 rounded-xl hover:border-slate-300 hover:shadow-sm transition-all group"
+                    className="flex items-start gap-4 p-4 glass-ui-dark hover:border-[var(--color-accent-secondary)]/30 transition-all group"
                   >
                     <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
-                      style={{ background: TYPE_COLORS[resource.type] + "12", border: `1px solid ${TYPE_COLORS[resource.type]}30` }}
+                      className="w-10 h-10 flex items-center justify-center text-lg flex-shrink-0"
+                      style={{ background: TYPE_COLORS[resource.type] + "15", border: `1px solid ${TYPE_COLORS[resource.type]}30` }}
                     >
                       {TYPE_ICONS[resource.type]}
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <h3 className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{resource.title}</h3>
+                        <h3 className="text-sm font-bold text-[var(--text-primary)] group-hover:text-[var(--color-accent-secondary)] transition-colors">{resource.title}</h3>
                         <span
                           className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                          style={{ background: TYPE_COLORS[resource.type] + "12", color: TYPE_COLORS[resource.type] }}
+                          style={{ background: TYPE_COLORS[resource.type] + "15", color: TYPE_COLORS[resource.type] }}
                         >
                           {resource.source}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-400 leading-relaxed mb-2">{resource.description}</p>
+                      <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-2">{resource.description}</p>
                       <div className="flex flex-wrap gap-1">
                         {resource.tags.map((tag) => (
-                          <span key={tag} className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">
+                          <span key={tag} className="text-[10px] px-2 py-0.5 bg-[var(--bg-card)] text-[var(--text-secondary)] rounded-full border border-[var(--border-light)]">
                             {tag}
                           </span>
                         ))}
                       </div>
                     </div>
 
-                    <div className="text-slate-300 group-hover:text-blue-400 transition-colors flex-shrink-0 mt-1">↗</div>
+                    <div className="text-[var(--text-secondary)] group-hover:text-[var(--color-accent-secondary)] transition-colors flex-shrink-0 mt-1">
+                      <ExternalLink size={16} />
+                    </div>
                   </motion.a>
                 ))}
               </div>
             </div>
           ))}
 
-          <div className="h-px bg-slate-200 my-6" />
-          <p className="text-[11px] text-center text-slate-400">
+          <div className="h-px bg-[var(--border-light)] my-6" />
+          <p className="text-[11px] text-center text-[var(--text-secondary)]">
             Semua tautan menuju sumber eksternal. CardioLearn tidak berafiliasi dengan platform tersebut.
           </p>
         </div>

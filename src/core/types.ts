@@ -65,7 +65,7 @@ export interface Module {
   title: string;
   subtitle: string;
   href: string;
-  icon: string;
+  icon: React.ReactNode;
   color: string;
 }
 

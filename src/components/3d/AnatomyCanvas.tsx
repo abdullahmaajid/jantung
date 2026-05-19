@@ -4,10 +4,57 @@ import { Suspense, useRef, useMemo, useState, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import { ANATOMY_PARTS } from "@/lib/mock-data";
 import { AnatomyPart } from "@/core/types";
+import useHeartStore from "@/store/heartStore";
 
 useGLTF.preload("/models/heart.glb");
+
+// ─── Theme-Aware Lighting Rig (identical logic to HeartCanvas) ────────────────
+function ThemeAwareLights() {
+  const theme = useHeartStore((s) => s.theme);
+  const isDark = theme === "dark";
+
+  const ambientRef = useRef<THREE.AmbientLight>(null!);
+  const keyLightRef = useRef<THREE.SpotLight>(null!);
+  const rimRedRef = useRef<THREE.SpotLight>(null!);
+  const rimGoldRef = useRef<THREE.PointLight>(null!);
+  const fillRef = useRef<THREE.DirectionalLight>(null!);
+
+  const targets = isDark
+    ? {
+        ambient: 0.15,
+        key: { intensity: 3.0, color: new THREE.Color("#ffffff") },
+        rimRed: { intensity: 4.0, color: new THREE.Color("#9B111E") },
+        rimGold: { intensity: 2.0, color: new THREE.Color("#D4AF37") },
+        fill: { intensity: 0.4, color: new THREE.Color("#ffffff") },
+      }
+    : {
+        ambient: 1.8,
+        key: { intensity: 5.0, color: new THREE.Color("#f0f4ff") },
+        rimRed: { intensity: 1.5, color: new THREE.Color("#c0392b") },
+        rimGold: { intensity: 1.0, color: new THREE.Color("#e8c87a") },
+        fill: { intensity: 2.5, color: new THREE.Color("#e8eef5") },
+      };
+
+  useFrame(() => {
+    const lerp = THREE.MathUtils.lerp;
+    if (ambientRef.current) ambientRef.current.intensity = lerp(ambientRef.current.intensity, targets.ambient, 0.08);
+    if (keyLightRef.current) { keyLightRef.current.intensity = lerp(keyLightRef.current.intensity, targets.key.intensity, 0.08); keyLightRef.current.color.lerp(targets.key.color, 0.08); }
+    if (rimRedRef.current) { rimRedRef.current.intensity = lerp(rimRedRef.current.intensity, targets.rimRed.intensity, 0.08); rimRedRef.current.color.lerp(targets.rimRed.color, 0.08); }
+    if (rimGoldRef.current) { rimGoldRef.current.intensity = lerp(rimGoldRef.current.intensity, targets.rimGold.intensity, 0.08); rimGoldRef.current.color.lerp(targets.rimGold.color, 0.08); }
+    if (fillRef.current) { fillRef.current.intensity = lerp(fillRef.current.intensity, targets.fill.intensity, 0.08); fillRef.current.color.lerp(targets.fill.color, 0.08); }
+  });
+
+  return (
+    <>
+      <ambientLight ref={ambientRef} intensity={targets.ambient} />
+      <spotLight ref={keyLightRef} position={[-8, 12, 10]} angle={0.35} penumbra={1} intensity={targets.key.intensity} color={targets.key.color} castShadow />
+      <spotLight ref={rimRedRef} position={[12, 4, -10]} angle={0.4} penumbra={1} intensity={targets.rimRed.intensity} color={targets.rimRed.color} />
+      <pointLight ref={rimGoldRef} position={[-10, -6, -8]} intensity={targets.rimGold.intensity} color={targets.rimGold.color} />
+      <directionalLight ref={fillRef} position={[0, 3, 6]} intensity={targets.fill.intensity} color={targets.fill.color} />
+    </>
+  );
+}
 
 // ─── Model Jantung ────────────────────────────────────────────
 function HeartModel({
@@ -19,6 +66,31 @@ function HeartModel({
 }) {
   const { scene } = useGLTF("/models/heart.glb");
   const cloned = useMemo(() => scene.clone(true), [scene]);
+  const layerVisibility = useHeartStore((state) => state.layerVisibility);
+
+  // Implementasi Toggle Overlay (Sembunyikan lapisan otot / X-Ray Mode)
+  useEffect(() => {
+    cloned.traverse((child: any) => {
+      if (child.isMesh && child.material) {
+        // Clone material to avoid mutating cached GLTF
+        if (!child.userData.originalMaterial) {
+          child.userData.originalMaterial = child.material.clone();
+        }
+        
+        if (layerVisibility === "vessels") {
+          // Mode X-Ray / Sembunyikan otot
+          const mat = child.userData.originalMaterial.clone();
+          mat.transparent = true;
+          mat.opacity = 0.3;
+          mat.wireframe = true;
+          child.material = mat;
+        } else {
+          // Mode Normal
+          child.material = child.userData.originalMaterial;
+        }
+      }
+    });
+  }, [cloned, layerVisibility]);
 
   return (
     <group
@@ -26,12 +98,6 @@ function HeartModel({
       scale={[scale, scale, scale]}
       onPointerDown={(e: any) => {
         e.stopPropagation();
-        console.log(
-          "📍 Koordinat klik [x, y, z]:",
-          e.point.x.toFixed(3),
-          e.point.y.toFixed(3),
-          e.point.z.toFixed(3)
-        );
       }}
     >
       <primitive object={cloned} />
@@ -39,7 +105,7 @@ function HeartModel({
   );
 }
 
-// ─── Titik Annotasi ───────────────────────────────────────────
+// ─── Titik Annotasi (Neo-Swiss Style) ───────────────────────────────────────────
 function Annotation({
   part,
   isSelected,
@@ -49,53 +115,63 @@ function Annotation({
   isSelected: boolean;
   onSelect: (p: AnatomyPart) => void;
 }) {
+  // Enforce char limit 100-146
+  let desc = part.description;
+  if (desc.length > 146) {
+    desc = desc.substring(0, 143) + "...";
+  }
+
   return (
-    <Html position={part.position} distanceFactor={8} zIndexRange={[100, 0]}>
+    <Html 
+      position={part.position} 
+      distanceFactor={8} 
+      zIndexRange={isSelected ? [1000, 900] : [100, 0]}
+    >
       <div className="relative flex flex-col items-center group">
         <button
           onClick={() => onSelect(part)}
-          className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${
+          className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
             isSelected
-              ? "bg-blue-500 border-white scale-125 shadow-[0_0_20px_rgba(59,130,246,0.8)]"
-              : "bg-white/70 border-blue-400 hover:bg-blue-200"
+              ? "bg-[var(--color-accent-secondary)] scale-150 shadow-[0_0_15px_rgba(184,151,66,0.6)]"
+              : "bg-[var(--color-accent-secondary)]/40 hover:bg-[var(--color-accent-secondary)]/90 shadow-[0_0_6px_rgba(212,175,55,0.3)]"
           }`}
-          title={part.label}
         />
+        
+        {/* Tooltip garis tipis (Neo-Swiss) */}
         <div
-          className={`mt-2 px-2 py-1 rounded bg-white/95 border border-blue-100 shadow-sm transition-opacity duration-200 whitespace-nowrap pointer-events-none ${
-            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          className={`absolute top-8 left-1/2 -translate-x-1/2 w-56 p-4 bg-[var(--bg-main)]/95 backdrop-blur-xl border border-[var(--border-strong)] transition-all duration-500 pointer-events-none ${
+            isSelected ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
           }`}
+          style={{ zIndex: isSelected ? 9999 : 1 }}
         >
-          <span className="text-[10px] font-bold text-blue-900 uppercase tracking-tighter">
+          {/* Garis penghubung */}
+          <div className={`w-px h-8 bg-[var(--color-accent-secondary)]/50 absolute -top-8 left-1/2 -translate-x-1/2 transition-all duration-500 delay-100 ${isSelected ? "h-8" : "h-0"}`} />
+          
+          <h4 className="text-[var(--color-accent-secondary)] text-[10px] font-bold uppercase tracking-widest mb-2">
             {part.label}
-          </span>
+          </h4>
+          <p className="text-[var(--text-secondary)] text-[10px] leading-relaxed font-light relative z-10">
+            {desc}
+          </p>
         </div>
       </div>
     </Html>
   );
 }
 
-// ─── Camera Zoom Controller ───────────────────────────────────
-// Menggerakkan kamera mendekati/menjauhi pivotPoint secara smooth
-function CameraZoomController({
-  targetZ,
+// ─── Camera Zoom & Fly-To Controller ─────────────────────────
+function CameraFlyController({
   pivotPoint,
+  controlsRef
 }: {
-  targetZ: number;
   pivotPoint: THREE.Vector3;
+  controlsRef: any;
 }) {
-  const { camera } = useThree();
-
   useFrame(() => {
-    // Hitung arah dari pivot ke kamera
-    const dir = camera.position.clone().sub(pivotPoint).normalize();
-    // Hitung jarak saat ini
-    const currentDist = camera.position.distanceTo(pivotPoint);
-    // Lerp jarak menuju targetZ
-    const newDist = currentDist + (targetZ - currentDist) * 0.1;
-    // Update posisi kamera sepanjang arah yang sama (tidak mengubah sudut orbit)
-    camera.position.copy(pivotPoint).addScaledVector(dir, newDist);
-    camera.updateProjectionMatrix();
+    if (!controlsRef.current) return;
+    // 1. Lerp OrbitControls target for smooth panning
+    controlsRef.current.target.lerp(pivotPoint, 0.05);
+    controlsRef.current.update();
   });
 
   return null;
@@ -103,42 +179,47 @@ function CameraZoomController({
 
 // ─── Scene Utama ──────────────────────────────────────────────
 function AnatomyScene({
+  anatomyParts,
   selectedPart,
   onSelectPart,
   heartPosition,
   heartScale,
-  cameraZ,
 }: {
+  anatomyParts: AnatomyPart[];
   selectedPart: AnatomyPart | null;
   onSelectPart: (p: AnatomyPart) => void;
   heartPosition: [number, number, number];
   heartScale: number;
-  cameraZ: number;
 }) {
   const controlsRef = useRef<any>(null);
 
-  // ✅ Kunci pivot OrbitControls TEPAT di titik pusat jantung.
-  // Target tidak pernah berubah sehingga model tidak drift
-  // saat zoom in/out atau saat rotasi.
-  const pivotPoint = useMemo(
-    () => new THREE.Vector3(...heartPosition),
-    [heartPosition]
-  );
-
-  useFrame(() => {
-    if (!controlsRef.current) return;
-    // Paksa target selalu kembali ke pivot — tidak bergerak kemana-mana
-    controlsRef.current.target.copy(pivotPoint);
-    controlsRef.current.update();
-  });
+  const pivotPoint = useMemo(() => {
+    if (selectedPart) {
+      return new THREE.Vector3(...selectedPart.position);
+    }
+    return new THREE.Vector3(...heartPosition);
+  }, [heartPosition, selectedPart]);
 
   return (
     <>
-      <CameraZoomController targetZ={cameraZ} pivotPoint={pivotPoint} />
+      <CameraFlyController pivotPoint={pivotPoint} controlsRef={controlsRef} />
 
-      <Suspense fallback={null}>
+      <Suspense fallback={
+        <Html center>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+            <div style={{
+              width: "32px", height: "32px",
+              border: "2px solid #D4AF37",
+              borderTopColor: "transparent",
+              borderRadius: "50%",
+              animation: "spin 0.8s linear infinite"
+            }} />
+            <p style={{ color: "#9CA3AF", fontSize: "10px", fontWeight: "bold", letterSpacing: "0.15em", textTransform: "uppercase" }}>Memuat Model 3D...</p>
+          </div>
+        </Html>
+      }>
         <HeartModel scale={heartScale} position={heartPosition} />
-        {ANATOMY_PARTS.map((part) => (
+        {anatomyParts.map((part) => (
           <Annotation
             key={part.id}
             part={part}
@@ -152,7 +233,9 @@ function AnatomyScene({
         ref={controlsRef}
         target={heartPosition}
         enablePan={false}
-        enableZoom={false}
+        enableZoom={true}
+        minDistance={1.5}
+        maxDistance={12.0}
         enableDamping
         dampingFactor={0.06}
         makeDefault
@@ -163,101 +246,41 @@ function AnatomyScene({
 
 // ─── Export Utama ─────────────────────────────────────────────
 export interface AnatomyCanvasProps {
+  anatomyParts: AnatomyPart[];
   selectedPart: AnatomyPart | null;
   onSelectPart: (p: AnatomyPart) => void;
   heartPosition?: [number, number, number];
   heartScale?: number;
 }
 
-// Batas zoom: semakin kecil = makin dekat (zoom in), semakin besar = makin jauh (zoom out)
-const ZOOM_MIN = 1.5;   // 100% zoom
-const ZOOM_MAX = 8.0;   // 0% zoom
-const ZOOM_DEFAULT_INDEX = 0; // Default 0% zoom (farthest)
-
 export default function AnatomyCanvas({
+  anatomyParts,
   selectedPart,
   onSelectPart,
-  heartPosition = [0.5, 0, 0],
+  heartPosition = [0, 0, 0], // Center it for the 9-col layout
   heartScale = 5,
 }: AnatomyCanvasProps) {
-  // Gunakan index 0-10 untuk mewakili 0%, 10%, ..., 100%
-  const [zoomIndex, setZoomIndex] = useState(ZOOM_DEFAULT_INDEX);
-
-  const zoomIn  = () => setZoomIndex((prev) => Math.min(10, prev + 1));
-  const zoomOut = () => setZoomIndex((prev) => Math.max(0, prev - 1));
-  const resetZoom = () => setZoomIndex(ZOOM_DEFAULT_INDEX);
-
-  // Hitung cameraZ berdasarkan zoomIndex (interpolasi linear antara MAX dan MIN)
-  // 0% (index 0) = ZOOM_MAX
-  // 100% (index 10) = ZOOM_MIN
-  const cameraZ = ZOOM_MAX - (zoomIndex / 10) * (ZOOM_MAX - ZOOM_MIN);
-  const zoomPercent = zoomIndex * 10;
-
   return (
-    <div style={{ width: "100%", height: "100%" }} className="relative">
+    <div style={{ width: "100%", height: "100%" }} className="relative bg-[var(--bg-main)]">
       <Canvas
-        camera={{ position: [0, 0, ZOOM_MAX - (ZOOM_DEFAULT_INDEX / 10) * (ZOOM_MAX - ZOOM_MIN)], fov: 35 }}
+        camera={{ position: [0, 0, 6.5], fov: 35 }}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         dpr={[1, 2]}
+        onCreated={({ gl }) => {
+          // Ensure context doesn't get lost on re-navigation
+          gl.setClearColor(0x000000, 0);
+        }}
       >
-        <ambientLight intensity={1.8} />
-        <spotLight position={[10, 15, 10]} angle={0.3} penumbra={1} intensity={3} castShadow />
-        <pointLight position={[-10, -5, -10]} intensity={2} color="#e0f2fe" />
-        <directionalLight position={[0, 5, 5]} intensity={1} />
+        <ThemeAwareLights />
 
         <AnatomyScene
+          anatomyParts={anatomyParts}
           selectedPart={selectedPart}
           onSelectPart={onSelectPart}
           heartPosition={heartPosition}
           heartScale={heartScale}
-          cameraZ={cameraZ}
         />
       </Canvas>
-
-      {/* ── Tombol Zoom (overlay di atas canvas) ── */}
-      <div className="absolute bottom-6 right-6 flex flex-col items-center gap-1 z-20">
-        {/* Zoom In */}
-        <button
-          onClick={zoomIn}
-          disabled={zoomIndex >= 10}
-          className="w-9 h-9 bg-white border border-slate-200 rounded-lg shadow-sm flex items-center justify-center text-slate-700 font-bold text-lg hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Zoom In"
-        >
-          +
-        </button>
-
-        {/* Indikator zoom */}
-        <div className="flex flex-col items-center gap-1 py-2">
-          <div className="w-px h-16 bg-slate-200 relative rounded-full overflow-hidden">
-            <div
-              className="absolute bottom-0 left-0 right-0 bg-blue-400 rounded-full transition-all duration-300"
-              style={{ height: `${zoomPercent}%` }}
-            />
-          </div>
-          <span className="text-[9px] font-bold text-slate-400 tracking-widest">
-            {zoomPercent}%
-          </span>
-        </div>
-
-        {/* Zoom Out */}
-        <button
-          onClick={zoomOut}
-          disabled={zoomIndex <= 0}
-          className="w-9 h-9 bg-white border border-slate-200 rounded-lg shadow-sm flex items-center justify-center text-slate-700 font-bold text-lg hover:bg-slate-50 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Zoom Out"
-        >
-          −
-        </button>
-
-        {/* Reset zoom */}
-        <button
-          onClick={resetZoom}
-          className="mt-1 w-9 h-9 bg-white border border-slate-200 rounded-lg shadow-sm flex items-center justify-center text-slate-400 text-xs hover:bg-slate-50 active:scale-95 transition-all"
-          title="Reset Zoom"
-        >
-          ⊙
-        </button>
-      </div>
     </div>
   );
 }

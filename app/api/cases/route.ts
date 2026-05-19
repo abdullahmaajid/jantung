@@ -10,16 +10,12 @@
 // =============================================================
 
 import { NextRequest, NextResponse } from "next/server";
-import { CLINICAL_CASES } from "@/lib/mock-data";
+import prisma from "@/lib/prisma";
 
 // GET /api/cases - Ambil semua kasus klinis
 export async function GET(request: NextRequest) {
   try {
-    // Saat database PostgreSQL siap, ganti dengan:
-    // import prisma from "@/lib/prisma";
-    // const cases = await prisma.clinicalCase.findMany();
-
-    const cases = CLINICAL_CASES;
+    const cases = await prisma.clinicalCase.findMany();
 
     return NextResponse.json({
       data: cases,

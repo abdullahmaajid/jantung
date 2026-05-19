@@ -22,8 +22,11 @@ interface HeartStore {
   selectedPart: AnatomyPart | null;     // Bagian anatomi yang diklik (null = belum ada)
   conductionStep: number;               // Step animasi konduksi (0-5)
   isPlaying: boolean;                   // Apakah animasi sedang berjalan?
+  scrubPercent: number | null;          // Scrubbing slider (0-100), null = auto play
+  showHemodynamicIndicators: boolean;   // Toggle teks indikator melayang
   volume: number;                       // Volume audio (0-1)
   isSidebarVisible: boolean;            // Apakah sidebar sedang ditampilkan?
+  theme: "dark" | "light";              // Tema aplikasi
   
   // ── ACTIONS (fungsi untuk mengubah state) ──
   // "void" artinya fungsi tidak mengembalikan nilai apapun
@@ -31,9 +34,12 @@ interface HeartStore {
   setLayerVisibility: (layer: LayerVisibility) => void;
   setSelectedPart: (part: AnatomyPart | null) => void;
   setConductionStep: (step: number) => void;
+  setScrubPercent: (percent: number | null) => void;
+  toggleHemodynamicIndicators: () => void;
   togglePlayback: () => void;
   setVolume: (vol: number) => void;
   toggleSidebar: () => void;
+  toggleTheme: () => void;
   resetAll: () => void;
 }
 
@@ -43,9 +49,12 @@ const initialState = {
   layerVisibility: "all" as LayerVisibility,
   selectedPart: null,
   conductionStep: 0,
-  isPlaying: false,
+  isPlaying: true, // Default true agar model GLB autoplay
+  scrubPercent: null,
+  showHemodynamicIndicators: true,
   volume: 0.5,
   isSidebarVisible: true,
+  theme: "dark" as "dark" | "light",
 };
 
 // Membuat store dengan Zustand
@@ -64,12 +73,28 @@ const useHeartStore = create<HeartStore>((set) => ({
   
   setConductionStep: (conductionStep) => set({ conductionStep }),
   
+  setScrubPercent: (scrubPercent) => set({ scrubPercent }),
+  
+  toggleHemodynamicIndicators: () => set((state) => ({ showHemodynamicIndicators: !state.showHemodynamicIndicators })),
+  
   // Contoh action yang membaca state sebelumnya (prev)
   togglePlayback: () => set((prev) => ({ isPlaying: !prev.isPlaying })),
   
   setVolume: (volume) => set({ volume }),
   
   toggleSidebar: () => set((state) => ({ isSidebarVisible: !state.isSidebarVisible })),
+  
+  toggleTheme: () => set((state) => {
+    const newTheme = state.theme === "dark" ? "light" : "dark";
+    if (typeof window !== "undefined") {
+      if (newTheme === "light") {
+        document.body.classList.add("theme-light");
+      } else {
+        document.body.classList.remove("theme-light");
+      }
+    }
+    return { theme: newTheme };
+  }),
   
   resetAll: () => set(initialState),
 }));

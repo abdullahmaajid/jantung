@@ -8,6 +8,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model UserProgress {
@@ -22,11 +23,32 @@ model UserProgress {
 }
 
 model ClinicalCase {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
   title       String
   description String
   audioUrl    String
   correctAnsw String
+  options     String[]
 
   @@map("clinical_cases")
+}
+
+model AnatomyPart {
+  id          String   @id
+  label       String
+  description String
+  position    Float[]
+  color       String
+
+  @@map("anatomy_parts")
+}
+
+model ConductionNode {
+  id          String   @id
+  name        String
+  position    Float[]
+  delay       Int
+  color       String
+
+  @@map("conduction_nodes")
 }

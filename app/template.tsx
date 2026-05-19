@@ -26,7 +26,7 @@ export default function Template({ children }: { children: React.ReactNode }) {
             exit: { scaleY: 1 },
           }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-0 bg-blue-600 z-[9999] origin-bottom pointer-events-none"
+          className="fixed inset-0 bg-[var(--color-accent-primary-light)] z-[9999] origin-bottom pointer-events-none"
         />
         
         <motion.div
@@ -36,7 +36,7 @@ export default function Template({ children }: { children: React.ReactNode }) {
             exit: { scaleY: 0 },
           }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-0 bg-blue-600 z-[9999] origin-top pointer-events-none"
+          className="fixed inset-0 bg-[var(--color-accent-primary-light)] z-[9999] origin-top pointer-events-none"
         />
 
         {/* Konten Halaman dengan Efek Slide Up & Fade In */}
