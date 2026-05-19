@@ -4,7 +4,7 @@ import type { AnatomyPart } from "@/core/types";
 
 async function getAnatomyParts(): Promise<AnatomyPart[]> {
   const parts = await prisma.anatomyPart.findMany();
-  return parts.map(part => ({
+  return parts.map((part: any) => ({
     ...part,
     position: part.position as [number, number, number]
   }));
