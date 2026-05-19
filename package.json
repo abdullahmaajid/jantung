@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:watch": "nodemon --watch src --watch prisma --ext ts,tsx,prisma --exec 'next dev'",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
     "prisma:generate": "prisma generate",
