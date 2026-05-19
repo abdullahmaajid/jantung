@@ -6,8 +6,8 @@ async function getConductionNodes(): Promise<ConductionNode[]> {
   const nodes = await prisma.conductionNode.findMany();
   // Ensure array is sorted according to delays or order needed.
   // We can sort by delay to keep the sequence correct
-  nodes.sort((a, b) => a.delay - b.delay);
-  return nodes.map(node => ({
+  nodes.sort((a: any, b: any) => a.delay - b.delay);
+  return nodes.map((node: any) => ({
     ...node,
     position: node.position as [number, number, number]
   }));
